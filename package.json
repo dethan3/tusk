@@ -1,0 +1,23 @@
+{
+  "name": "tusk-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The sharpest data validation layer for Walrus - by OtterLabs",
+  "workspaces": [
+    "sdk",
+    "contracts"
+  ],
+  "scripts": {
+    "build": "pnpm -r build",
+    "clean": "pnpm -r clean"
+  },
+  "keywords": [
+    "walrus",
+    "sui",
+    "web3",
+    "data-validation",
+    "attestation"
+  ],
+  "author": "OtterLabs",
+  "license": "MIT"
+}
