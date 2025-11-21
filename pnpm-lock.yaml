@@ -13,7 +13,7 @@ importers:
   sdk:
     dependencies:
       '@mysten/sui':
-        specifier: ^1.0.0
+        specifier: ^1.14.0
         version: 1.45.0(typescript@5.9.3)
       ajv:
         specifier: ^8.12.0

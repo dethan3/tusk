@@ -29,11 +29,16 @@ async function main() {
     console.log('📌 Step 1: Initializing Tusk Client...');
 
     const network = (process.env.SUI_NETWORK as 'testnet' | 'mainnet' | 'devnet') || 'testnet';
-    const packageId = process.env.TUSK_PACKAGE_ID || '0x0';
-    const registryId = process.env.TUSK_REGISTRY_ID || '0x0';
     const privateKey = process.env.SUI_PRIVATE_KEY;
 
-    const tusk = new Tusk(network, packageId, registryId, privateKey);
+    // OtterLabs deploys the protocol - use defaults from SDK config
+    // Can override with environment variables if needed for testing
+    const packageId = process.env.TUSK_PACKAGE_ID;
+    const registryId = process.env.TUSK_REGISTRY_ID;
+
+    const tusk = packageId && registryId
+        ? new Tusk(network, packageId, registryId, privateKey)
+        : new Tusk(network, undefined, undefined, privateKey); // Uses OtterLabs defaults
 
     // ========== Step 2: Define AI Dataset Schema ==========
     console.log('\n📌 Step 2: Defining AI Dataset Schema...');
@@ -94,6 +99,13 @@ async function main() {
             console.error('   ⚠️  Error registering schema:', error.message);
             console.log('   Continuing with demo...');
         }
+
+        // Wait a moment for the schema to be indexed on the network
+        if (schemaObjectId) {
+            console.log('\n   ⏳ Waiting for schema to be indexed on network...');
+            await new Promise(resolve => setTimeout(resolve, 3000)); // 3 second delay
+            console.log('   ✅ Ready to proceed!');
+        }
     } else {
         console.log('\n📌 Step 3: Skipping Schema Registration (no private key)');
         console.log('   💡 Set SUI_PRIVATE_KEY in .env to enable on-chain operations');
@@ -111,17 +123,12 @@ async function main() {
     //    - Validate against the on-chain schema
     //    - Create an attestation if validation passes
 
-    const exampleBlobId = 'YOUR_WALRUS_BLOB_ID_HERE';
+    const exampleBlobId = 'H-rWHfeOr5lw4wU9VnSnTdCCaI6re6LwL4g095KF9Hw';
     const exampleSchemaId = schemaObjectId || 'YOUR_SCHEMA_OBJECT_ID_HERE';
 
-    console.log('   📝 To test with real data:');
-    console.log('   1. Upload your JSON data to Walrus Testnet');
-    console.log('   2. Get the blob ID from the upload response');
-    console.log('   3. Use your schema object ID from Step 3');
-    console.log('   4. Call: await tusk.pierce(blobId, schemaId)');
-    console.log('');
-    console.log('   Example:');
-    console.log(`   const result = await tusk.pierce('${exampleBlobId}', '${exampleSchemaId}');`);
+    console.log('   📝 Testing with REAL Walrus Blob:');
+    console.log(`   Blob ID: ${exampleBlobId}`);
+    console.log(`   Schema ID: ${exampleSchemaId}`);
     console.log('');
     console.log('   The SDK will automatically:');
     console.log('   ✅ Fetch blob from Walrus Aggregator HTTP API');
@@ -129,17 +136,18 @@ async function main() {
     console.log('   ✅ Create attestation if validation passes');
     console.log('');
 
-    // Uncomment this when you have a real Walrus blob:
-    // try {
-    //   const result = await tusk.pierce(exampleBlobId, exampleSchemaId);
-    //   if (result.isValid) {
-    //     console.log('🎉 Blob is valid! Attestation created:', result.attestationDigest);
-    //   } else {
-    //     console.log('❌ Blob validation failed:', result.errors);
-    //   }
-    // } catch (error) {
-    //   console.error('Pierce failed:', error);
-    // }
+    // REAL TEST: Pierce through the Walrus blob
+    try {
+        const result = await tusk.pierce(exampleBlobId, exampleSchemaId);
+        if (result.isValid) {
+            console.log('🎉 Blob is valid! Attestation created:', result.attestationDigest);
+        } else {
+            console.log('❌ Blob validation failed:', result.errors);
+        }
+    } catch (error: any) {
+        console.error('❌ Pierce failed:', error.message);
+        console.error('   This might be expected if the blob content does not match the schema.');
+    }
 
     // ========== Summary ==========
     console.log('\n🦦 ========================================');

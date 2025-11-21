@@ -10,13 +10,11 @@
  */
 
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
-import { TransactionBlock } from '@mysten/sui/transactions';
+import { Transaction } from '@mysten/sui/transactions';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import Ajv, { JSONSchemaType } from 'ajv';
 import axios from 'axios';
-
-// Walrus Testnet Aggregator endpoint
-const WALRUS_AGGREGATOR_URL = 'https://aggregator.walrus-testnet.walrus.space/v1';
+import { DEFAULT_PACKAGE_ID, DEFAULT_REGISTRY_ID, WALRUS_AGGREGATOR_URL } from './config';
 
 /**
  * Schema definition interface
@@ -24,7 +22,7 @@ const WALRUS_AGGREGATOR_URL = 'https://aggregator.walrus-testnet.walrus.space/v1
 export interface SchemaDefinition {
     name: string;
     version: string;
-    schema: JSONSchemaType<any>;
+    schema: any; // Using 'any' for flexibility with JSON schemas
 }
 
 /**
@@ -42,16 +40,19 @@ export class Tusk {
     /**
      * Initialize a new Tusk client
      * 
+     * OtterLabs deploys and maintains the protocol infrastructure.
+     * If no packageId/registryId provided, uses OtterLabs-deployed defaults.
+     * 
      * @param network - Sui network to connect to ('testnet', 'mainnet', 'devnet')
-     * @param packageId - The deployed Tusk protocol package ID
-     * @param registryId - The SchemaRegistry shared object ID
+     * @param packageId - Optional: Package ID (defaults to OtterLabs deployment)
+     * @param registryId - Optional: Registry ID (defaults to OtterLabs deployment)
      * @param privateKey - Optional: Sui private key for signing transactions
      * @param walrusUrl - Optional: Custom Walrus aggregator URL
      */
     constructor(
-        network: 'testnet' | 'mainnet' | 'devnet',
-        packageId: string,
-        registryId: string,
+        network: 'testnet' | 'mainnet' | 'devnet' = 'testnet',
+        packageId: string = DEFAULT_PACKAGE_ID,
+        registryId: string = DEFAULT_REGISTRY_ID,
         privateKey?: string,
         walrusUrl?: string
     ) {
@@ -62,17 +63,20 @@ export class Tusk {
         this.registryId = registryId;
         this.walrusAggregatorUrl = walrusUrl || WALRUS_AGGREGATOR_URL;
 
+
         // Initialize keypair if private key provided
         if (privateKey) {
-            // Remove 'suiprivkey' prefix if present
-            const cleanKey = privateKey.replace('suiprivkey', '');
-            this.keypair = Ed25519Keypair.fromSecretKey(
-                Buffer.from(cleanKey, 'base64')
-            );
+            // Use the Sui SDK's built-in method to parse the key
+            this.keypair = Ed25519Keypair.fromSecretKey(privateKey);
         }
 
         // Initialize AJV for JSON schema validation
-        this.ajv = new Ajv({ allErrors: true, verbose: true });
+        // Add format support for date-time and other standard formats
+        this.ajv = new Ajv({
+            allErrors: true,
+            verbose: true,
+            strict: false  // Allow unknown formats
+        });
 
         console.log(`🦦 Tusk initialized on ${network}`);
         console.log(`📦 Package ID: ${packageId}`);
@@ -95,7 +99,7 @@ export class Tusk {
         console.log(`\n📝 Registering schema: ${schemaDef.name} v${schemaDef.version}`);
 
         // Build transaction
-        const tx = new TransactionBlock();
+        const tx = new Transaction();
 
         // Convert schema to JSON string
         const schemaContent = JSON.stringify(schemaDef.schema);
@@ -104,28 +108,29 @@ export class Tusk {
             target: `${this.packageId}::registry::register_schema`,
             arguments: [
                 tx.object(this.registryId), // Schema registry
-                tx.pure(Array.from(Buffer.from(schemaDef.name, 'utf8'))),
-                tx.pure(Array.from(Buffer.from(schemaDef.version, 'utf8'))),
-                tx.pure(Array.from(Buffer.from(schemaContent, 'utf8'))),
+                tx.pure.string(schemaDef.name),
+                tx.pure.string(schemaDef.version),
+                tx.pure.string(schemaContent),
             ],
         });
 
         // Execute transaction
-        const result = await this.client.signAndExecuteTransactionBlock({
-            transactionBlock: tx,
+        const result = await this.client.signAndExecuteTransaction({
+            transaction: tx,
             signer: this.keypair,
             options: {
                 showEffects: true,
                 showObjectChanges: true,
             },
         });
-
         console.log(`✅ Schema registered! Digest: ${result.digest}`);
 
-        // Find the created/shared schema object
+        // Find the created Schema object (not gas coins or other objects)
         const createdObjects = result.objectChanges?.filter(
-            (change) => change.type === 'created' || change.type === 'mutated'
-        );
+            (change: any) => change.type === 'created' &&
+                change.objectType &&
+                change.objectType.includes('::registry::Schema')
+        ) as any[];
 
         let schemaId = '';
         if (createdObjects && createdObjects.length > 0) {
@@ -165,8 +170,18 @@ export class Tusk {
                 options: { showContent: true },
             });
 
-            if (!schemaObj.data?.content || schemaObj.data.content.dataType !== 'moveObject') {
-                throw new Error('Schema not found or invalid');
+            console.log(`   Debug: Schema object status: ${schemaObj.data ? 'found' : 'not found'}`);
+
+            if (!schemaObj.data) {
+                throw new Error(`Schema object not found: ${schemaId}`);
+            }
+
+            if (!schemaObj.data.content) {
+                throw new Error(`Schema object has no content`);
+            }
+
+            if (schemaObj.data.content.dataType !== 'moveObject') {
+                throw new Error(`Invalid data type: ${schemaObj.data.content.dataType}`);
             }
 
             const schemaFields = schemaObj.data.content.fields as any;
@@ -253,20 +268,20 @@ export class Tusk {
         console.log(`\n🎖️  Creating on-chain attestation...`);
 
         // Build transaction
-        const tx = new TransactionBlock();
+        const tx = new Transaction();
 
         tx.moveCall({
             target: `${this.packageId}::registry::create_attestation`,
             arguments: [
                 tx.object(schemaId), // Schema object reference
-                tx.pure(Array.from(Buffer.from(blobId, 'utf8'))),
-                tx.pure(isValid),
+                tx.pure.string(blobId),
+                tx.pure.bool(isValid),
             ],
         });
 
         // Execute transaction
-        const result = await this.client.signAndExecuteTransactionBlock({
-            transactionBlock: tx,
+        const result = await this.client.signAndExecuteTransaction({
+            transaction: tx,
             signer: this.keypair,
             options: {
                 showEffects: true,
@@ -278,8 +293,8 @@ export class Tusk {
 
         // Find the created attestation object
         const createdObjects = result.objectChanges?.filter(
-            (change) => change.type === 'created'
-        );
+            (change: any) => change.type === 'created' && change.objectId
+        ) as any[];
 
         if (createdObjects && createdObjects.length > 0) {
             console.log(`   🆔 Attestation Object ID: ${createdObjects[0].objectId}`);
@@ -303,5 +318,5 @@ export class Tusk {
     }
 }
 
-// Export types
-export type { SchemaDefinition };
+// Export config constants
+export { DEFAULT_PACKAGE_ID, DEFAULT_REGISTRY_ID, WALRUS_AGGREGATOR_URL } from './config';

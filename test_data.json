@@ -1,0 +1,11 @@
+{
+    "dataset_name": "Tusk Demo Dataset",
+    "instances": 1000,
+    "labels": [
+        "validated",
+        "decentralized",
+        "quality"
+    ],
+    "format": "json",
+    "created_at": "2025-11-21T03:05:00Z"
+}
