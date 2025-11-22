@@ -123,10 +123,11 @@ async function main() {
     //    - Validate against the on-chain schema
     //    - Create an attestation if validation passes
 
-    const exampleBlobId = 'H-rWHfeOr5lw4wU9VnSnTdCCaI6re6LwL4g095KF9Hw';
+    // Updated with test_data.json blob that matches AI Dataset Schema
+    const exampleBlobId = 'LoUsG0jxgQHugd2ZgRe-vFvVd7Oa9tS9BZvHVGfwfY0';
     const exampleSchemaId = schemaObjectId || 'YOUR_SCHEMA_OBJECT_ID_HERE';
 
-    console.log('   📝 Testing with REAL Walrus Blob:');
+    console.log('   📝 Testing with REAL Walrus Blob (test_data.json):');
     console.log(`   Blob ID: ${exampleBlobId}`);
     console.log(`   Schema ID: ${exampleSchemaId}`);
     console.log('');

@@ -229,9 +229,9 @@ pnpm demo
 
 ### Using with Real Walrus Blobs
 
-1. Upload Data to Walrus
+#### 1. Upload Data to Walrus
 
-```
+```sh
 # Install Walrus CLI
 
 # Follow: <https://docs.walrus.xyz>
@@ -243,7 +243,7 @@ walrus store mydata.json
 # Save the blob ID from output
 ```
 
-2. Pierce the Blob
+#### 2. Pierce the Blob
 
 ```ts
 import { Tusk } from '@otterlabs/tusk';
@@ -289,21 +289,21 @@ if (result.isValid) {
 
 ### Pierce Workflow (MVP)
 
-- Developer registers schema on Sui (becomes shared object)
-- Data uploaded to Walrus → blob ID received
-- Call tusk.pierce(blobId, schemaId)
-- SDK automatically fetches from Walrus HTTP API
-- SDK validates structure using on-chain schema
-- If valid, attestation minted on-chain
-- Quality certificate proves validation
+1. Developer registers schema on Sui (becomes shared object)
+2. Data uploaded to Walrus → blob ID received
+3. Call tusk.pierce(blobId, schemaId)
+4. SDK automatically fetches from Walrus HTTP API
+5. SDK validates structure using on-chain schema
+6. If valid, attestation minted on-chain
+7. Quality certificate proves validation
 
 ### Future: Sniff Workflow (v2)
 
-- Developer has local data (not yet uploaded)
-- Call tusk.sniff(data, schemaId)
-- SDK validates locally before upload
-- Saves gas/fees by catching errors early
-- Upload to Walrus only if valid
+1. Developer has local data (not yet uploaded)
+2. Call tusk.sniff(data, schemaId)
+3. SDK validates locally before upload
+4. Saves gas/fees by catching errors early
+5. Upload to Walrus only if valid
 
 ### Security Considerations
 
@@ -314,28 +314,33 @@ if (result.isValid) {
 - No manual data passing - SDK fetches from source
 
 ### Key Files Reference
-File Purpose
-schema_registry.move
-Smart contract implementation
-index.ts
-SDK main implementation
-demo.ts
-Usage demonstration
-Move.toml
-Contract configuration
-package.json
-SDK package config
-QUICKSTART.md
-Installation guide
-Commands Reference
-Contract Commands
+
+| File | Purpose |
+|---|---|
+| `schema_registry.move` | Smart contract implementation|
+| `index.ts` | SDK main implementation | 
+| `demo.ts` | Usage demonstration |
+| `Move.toml` | Contract configuration |
+| `package.json` | SDK package config |
+| `QUICKSTART.md` | Installation guide |
+
+## Commands Reference
+
+### Contract Commands
+
+```sh
 sui move build              # Build contracts
 sui move test               # Run tests
 sui client publish          # Deploy to network
-SDK Commands
+```
+
+### SDK Commands
+
+```sh
 pnpm install               # Install dependencies
 pnpm build                 # Compile TypeScript
 pnpm demo                  # Run demo
+```
 
 ### Workspace Commands
 
@@ -351,7 +356,7 @@ pnpm build                # Build all packages
 2. Test SDK: Run the demo with real package ID
 3. Integrate Walrus: Add actual blob fetching logic
 4. Extend Schemas: Create more schema types
-Build dApp: Create web interface for validation
+5. Build dApp: Create web interface for validation
 
 ## What Makes This Special
 
@@ -361,4 +366,5 @@ Build dApp: Create web interface for validation
 - 📚 Well Documented: READMEs, comments, guides
 - 🔧 Developer Friendly: Installation scripts, demos
 - ✅ Complete Solution: Contract + SDK + Demo
+
 Built with ❤️ by OtterLabs for the Walrus Hackathon

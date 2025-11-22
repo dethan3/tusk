@@ -74,15 +74,29 @@ module tusk::registry {
         is_valid: bool,
     }
 
+    /// Event emitted when the registry is created
+    /// OtterLabs: Use this to find the registry ID after deployment
+    public struct RegistryCreated has copy, drop {
+        registry_id: ID,
+    }
+
     // ========== Initialization ==========
     
     /// Initialize the schema registry
     /// Called once when the module is published
+    /// OtterLabs: Emits RegistryCreated event to track the shared object ID
     fun init(ctx: &mut TxContext) {
         let registry = SchemaRegistry {
             id: object::new(ctx),
             schema_count: 0,
         };
+        
+        let registry_id = object::id(&registry);
+        
+        // Emit event so OtterLabs can find the registry ID
+        event::emit(RegistryCreated {
+            registry_id,
+        });
         
         // Share the registry so anyone can read it
         transfer::share_object(registry);
